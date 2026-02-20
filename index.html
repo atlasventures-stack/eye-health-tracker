@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Eye Health Tracker</title>
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon.svg">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-top">
+                <h1>Eye Health</h1>
+                <div class="date" id="currentDate"></div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <span class="progress-text" id="progressText">0%</span>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs">
+            <button class="tab active" data-tab="checklist">Checklist</button>
+            <button class="tab" data-tab="timers">Timers</button>
+            <button class="tab" data-tab="screentime">Screen</button>
+            <button class="tab" data-tab="history">History</button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Checklist Tab -->
+            <section class="tab-content active" id="checklist">
+                <!-- Active Timers Banner -->
+                <div class="active-timers" id="activeTimers" style="display: none;">
+                    <div class="timer-badge" id="workTimer">
+                        <span class="timer-icon">💻</span>
+                        <span class="timer-value" id="workTimerValue">00:00</span>
+                    </div>
+                    <div class="timer-badge" id="nextBreak">
+                        <span class="timer-icon">👁️</span>
+                        <span class="timer-value" id="nextBreakValue">20:00</span>
+                    </div>
+                </div>
+
+                <!-- Morning Section -->
+                <div class="checklist-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">🌅</span>
+                        Morning (Wake Up)
+                    </h2>
+                    <div class="checklist-items" id="morningItems">
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="morning-water">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Drink 1 full glass of water</span>
+                        </label>
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="morning-splash">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Splash cold water on eyes</span>
+                        </label>
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="morning-almonds">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Eat 4-5 soaked almonds</span>
+                        </label>
+                        <label class="checklist-item optional">
+                            <input type="checkbox" data-id="morning-neti">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Jala Neti <span class="optional-tag">optional</span></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- During Work Section -->
+                <div class="checklist-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">💼</span>
+                        During Work
+                    </h2>
+                    <div class="checklist-items" id="workItems">
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="work-water1">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Water bottle #1 (by mid-morning)</span>
+                        </label>
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="work-water2">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Water bottle #2 (by lunch)</span>
+                        </label>
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="work-water3">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Water bottle #3 (by mid-afternoon)</span>
+                        </label>
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="work-water4">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Water bottle #4 (by evening)</span>
+                        </label>
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="work-drops-morning">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Refresh Tears - Morning</span>
+                        </label>
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="work-drops-afternoon">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Refresh Tears - Afternoon</span>
+                        </label>
+                        <div class="counter-item">
+                            <span class="item-text">20-20-20 breaks taken</span>
+                            <div class="counter-controls">
+                                <button class="counter-btn" data-action="decrement" data-counter="breaks">-</button>
+                                <span class="counter-value" id="breaksCount">0</span>
+                                <button class="counter-btn" data-action="increment" data-counter="breaks">+</button>
+                            </div>
+                        </div>
+                        <div class="counter-item">
+                            <span class="item-text">Conscious blinking sessions</span>
+                            <div class="counter-controls">
+                                <button class="counter-btn" data-action="decrement" data-counter="blinks">-</button>
+                                <span class="counter-value" id="blinksCount">0</span>
+                                <button class="counter-btn" data-action="increment" data-counter="blinks">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Evening Section -->
+                <div class="checklist-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">🌆</span>
+                        Evening
+                    </h2>
+                    <div class="checklist-items" id="eveningItems">
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="evening-nuts">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Handful of walnuts/pumpkin seeds</span>
+                        </label>
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="evening-drops">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Refresh Tears - Evening</span>
+                        </label>
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="evening-sunetra">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Sreedhareeyam Sunetra drops</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Before Bed Section -->
+                <div class="checklist-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">🌙</span>
+                        Before Bed
+                    </h2>
+                    <div class="checklist-items" id="bedItems">
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="bed-milk">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Warm milk + turmeric + ghee</span>
+                        </label>
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="bed-triphala">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Triphala churna or tablet</span>
+                        </label>
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="bed-ghee">
+                            <span class="checkmark"></span>
+                            <span class="item-text">A2 ghee on eyelids</span>
+                        </label>
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="bed-almonds">
+                            <span class="checkmark"></span>
+                            <span class="item-text">Soak almonds for tomorrow</span>
+                        </label>
+                        <label class="checklist-item">
+                            <input type="checkbox" data-id="bed-noscreen">
+                            <span class="checkmark"></span>
+                            <span class="item-text">No screen 1 hour before bed</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Daily Limits Section -->
+                <div class="checklist-section limits-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">⚠️</span>
+                        Daily Limits
+                    </h2>
+                    <div class="checklist-items" id="limitsItems">
+                        <div class="limit-item">
+                            <span class="item-text">Screen time</span>
+                            <div class="limit-status" id="screenTimeStatus">
+                                <span class="limit-value">0h 0m</span>
+                                <span class="limit-target">/ 6h max</span>
+                            </div>
+                        </div>
+                        <div class="limit-item">
+                            <span class="item-text">Instagram</span>
+                            <input type="number" class="limit-input" id="instagramMinutes" placeholder="mins" min="0" max="300">
+                            <span class="limit-target">/ 30m max</span>
+                        </div>
+                        <div class="limit-item awareness">
+                            <span class="item-text">Sexual release</span>
+                            <div class="toggle-group">
+                                <button class="toggle-btn" data-value="0" id="releaseNo">No</button>
+                                <button class="toggle-btn" data-value="1" id="releaseYes">Yes</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Timers Tab -->
+            <section class="tab-content" id="timers">
+                <div class="timer-section">
+                    <h2 class="section-title">Active Reminders</h2>
+
+                    <div class="timer-card">
+                        <div class="timer-header">
+                            <span class="timer-name">20-20-20 Rule</span>
+                            <label class="switch">
+                                <input type="checkbox" id="timer2020Toggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <p class="timer-description">Every 20 minutes, look at something 20 feet away for 20 seconds</p>
+                        <div class="timer-display">
+                            <span class="timer-big" id="timer2020Display">20:00</span>
+                        </div>
+                        <div class="timer-controls">
+                            <button class="timer-btn" id="timer2020Reset">Reset</button>
+                        </div>
+                    </div>
+
+                    <div class="timer-card">
+                        <div class="timer-header">
+                            <span class="timer-name">Water Reminder</span>
+                            <label class="switch">
+                                <input type="checkbox" id="timerWaterToggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <p class="timer-description">Drink water every 30 minutes</p>
+                        <div class="timer-display">
+                            <span class="timer-big" id="timerWaterDisplay">30:00</span>
+                        </div>
+                        <div class="timer-controls">
+                            <button class="timer-btn" id="timerWaterReset">Reset</button>
+                        </div>
+                    </div>
+
+                    <div class="timer-card">
+                        <div class="timer-header">
+                            <span class="timer-name">Eye Drops Reminder</span>
+                            <label class="switch">
+                                <input type="checkbox" id="timerDropsToggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <p class="timer-description">Use Refresh Tears every 2 hours</p>
+                        <div class="timer-display">
+                            <span class="timer-big" id="timerDropsDisplay">2:00:00</span>
+                        </div>
+                        <div class="timer-controls">
+                            <button class="timer-btn" id="timerDropsReset">Reset</button>
+                        </div>
+                    </div>
+
+                    <div class="timer-card">
+                        <div class="timer-header">
+                            <span class="timer-name">Screen Break</span>
+                            <label class="switch">
+                                <input type="checkbox" id="timerBreakToggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <p class="timer-description">Take a 5-minute break after 30 minutes of screen time</p>
+                        <div class="timer-display">
+                            <span class="timer-big" id="timerBreakDisplay">30:00</span>
+                        </div>
+                        <div class="timer-controls">
+                            <button class="timer-btn" id="timerBreakReset">Reset</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="notification-settings">
+                    <h3>Notification Settings</h3>
+                    <button class="btn-primary" id="enableNotifications">Enable Notifications</button>
+                    <p class="notification-status" id="notificationStatus"></p>
+                </div>
+            </section>
+
+            <!-- Screen Time Tab -->
+            <section class="tab-content" id="screentime">
+                <div class="screen-tracker">
+                    <div class="screen-time-display">
+                        <div class="screen-time-circle">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="screen-time-bg" cx="50" cy="50" r="45"></circle>
+                                <circle class="screen-time-progress" cx="50" cy="50" r="45" id="screenTimeCircle"></circle>
+                            </svg>
+                            <div class="screen-time-text">
+                                <span class="screen-time-value" id="totalScreenTime">0:00</span>
+                                <span class="screen-time-label">of 6h</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="session-controls">
+                        <button class="btn-large" id="startSession">
+                            <span class="btn-icon">▶️</span>
+                            Start Work Session
+                        </button>
+                        <button class="btn-large btn-stop" id="stopSession" style="display: none;">
+                            <span class="btn-icon">⏹️</span>
+                            End Session
+                        </button>
+                    </div>
+
+                    <div class="current-session" id="currentSession" style="display: none;">
+                        <h3>Current Session</h3>
+                        <div class="session-timer" id="sessionTimer">0:00:00</div>
+                    </div>
+
+                    <div class="sessions-list">
+                        <h3>Today's Sessions</h3>
+                        <div id="sessionsList" class="sessions-container">
+                            <p class="no-sessions">No sessions recorded yet</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- History Tab -->
+            <section class="tab-content" id="history">
+                <div class="history-container">
+                    <h2>Weekly Overview</h2>
+                    <div class="week-grid" id="weekGrid">
+                        <!-- Generated by JS -->
+                    </div>
+
+                    <div class="stats-cards">
+                        <div class="stat-card">
+                            <span class="stat-value" id="avgCompletion">0%</span>
+                            <span class="stat-label">Avg. Daily Completion</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value" id="streakDays">0</span>
+                            <span class="stat-label">Day Streak</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value" id="avgScreenTime">0h</span>
+                            <span class="stat-label">Avg. Screen Time</span>
+                        </div>
+                    </div>
+
+                    <div class="history-actions">
+                        <button class="btn-secondary" id="exportData">Export Data</button>
+                        <button class="btn-secondary btn-danger" id="resetData">Reset All Data</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Notification Toast -->
+        <div class="toast" id="toast">
+            <span class="toast-icon">👁️</span>
+            <span class="toast-message" id="toastMessage"></span>
+            <button class="toast-close" id="toastClose">×</button>
+        </div>
+
+        <!-- Break Reminder Modal -->
+        <div class="modal" id="breakModal">
+            <div class="modal-content">
+                <div class="modal-icon">👀</div>
+                <h2>Time for a Break!</h2>
+                <p id="breakMessage">Look at something 20 feet away for 20 seconds.</p>
+                <div class="break-timer" id="breakTimer">20</div>
+                <button class="btn-primary" id="dismissBreak">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
