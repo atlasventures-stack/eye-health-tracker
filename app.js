@@ -4,6 +4,91 @@
 (function() {
     'use strict';
 
+    // ==================== CONFIG ====================
+    const LOCAL_API = 'http://localhost:8081';
+    let useLocalTracker = false; // Will be set to true if local API is available
+    let localTrackerPollInterval = null;
+
+    // ==================== LOCAL TRACKER SYNC ====================
+    async function checkLocalTracker() {
+        try {
+            const response = await fetch(LOCAL_API, {
+                method: 'GET',
+                mode: 'cors',
+                cache: 'no-cache'
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.source === 'auto-tracker') {
+                    return data;
+                }
+            }
+        } catch (e) {
+            // Local tracker not available
+        }
+        return null;
+    }
+
+    async function syncFromLocalTracker() {
+        const data = await checkLocalTracker();
+        if (data) {
+            state.screenTime.totalToday = data.total_seconds;
+            updateScreenTimeDisplay();
+            return true;
+        }
+        return false;
+    }
+
+    function startLocalTrackerSync() {
+        // Initial sync
+        syncFromLocalTracker();
+
+        // Poll every 30 seconds
+        localTrackerPollInterval = setInterval(async () => {
+            const synced = await syncFromLocalTracker();
+            if (!synced) {
+                // Local tracker went offline
+                useLocalTracker = false;
+                clearInterval(localTrackerPollInterval);
+                showManualScreenTimeUI();
+                showToast('Local tracker disconnected. Using manual mode.');
+            }
+        }, 30000);
+    }
+
+    function showAutoScreenTimeUI() {
+        const startBtn = document.getElementById('startSession');
+        const stopBtn = document.getElementById('stopSession');
+        const currentSessionEl = document.getElementById('currentSession');
+        const sessionControls = document.querySelector('.session-controls');
+
+        // Hide manual controls
+        if (startBtn) startBtn.style.display = 'none';
+        if (stopBtn) stopBtn.style.display = 'none';
+        if (currentSessionEl) currentSessionEl.style.display = 'none';
+
+        // Show auto-sync indicator
+        if (sessionControls) {
+            sessionControls.innerHTML = `
+                <div class="auto-sync-indicator">
+                    <span class="sync-dot"></span>
+                    <span>Auto-tracking from macOS</span>
+                </div>
+            `;
+        }
+
+        // Hide sessions list header text
+        const sessionsListHeader = document.querySelector('.sessions-header');
+        if (sessionsListHeader) {
+            sessionsListHeader.innerHTML = '<h4>🔄 Synced with Menu Bar</h4>';
+        }
+    }
+
+    function showManualScreenTimeUI() {
+        const startBtn = document.getElementById('startSession');
+        if (startBtn) startBtn.style.display = 'flex';
+    }
+
     // ==================== STATE ====================
     const state = {
         checklist: {},
@@ -391,9 +476,22 @@
     }
 
     // ==================== SCREEN TIME ====================
-    function initScreenTime() {
+    async function initScreenTime() {
         updateScreenTimeDisplay();
 
+        // Check if local tracker is available (macOS auto-tracking)
+        const localData = await checkLocalTracker();
+        if (localData) {
+            useLocalTracker = true;
+            state.screenTime.totalToday = localData.total_seconds;
+            updateScreenTimeDisplay();
+            showAutoScreenTimeUI();
+            startLocalTrackerSync();
+            console.log('Connected to local screen time tracker');
+            return; // Skip manual controls setup
+        }
+
+        // Fallback to manual tracking (for phone/other devices)
         const startBtn = document.getElementById('startSession');
         const stopBtn = document.getElementById('stopSession');
         const currentSessionEl = document.getElementById('currentSession');
