@@ -96,10 +96,7 @@
             breaks: 0,
             blinks: 0
         },
-        limits: {
-            instagram: 0,
-            release: null
-        },
+        limits: {},
         screenTime: {
             sessions: [],
             currentSession: null,
@@ -137,7 +134,7 @@
                         const todayData = parsed.history[today];
                         state.checklist = todayData.checklist || {};
                         state.counters = todayData.counters || { breaks: 0, blinks: 0 };
-                        state.limits = todayData.limits || { instagram: 0, release: null };
+                        state.limits = todayData.limits || {};
                         state.screenTime = todayData.screenTime || { sessions: [], totalToday: 0 };
                     }
                 }
@@ -252,46 +249,7 @@
 
     // ==================== LIMITS ====================
     function initLimits() {
-        // Instagram input
-        const instagramInput = document.getElementById('instagramMinutes');
-        if (instagramInput) {
-            instagramInput.value = state.limits.instagram || '';
-            instagramInput.addEventListener('change', () => {
-                state.limits.instagram = parseInt(instagramInput.value) || 0;
-                Storage.save();
-
-                // Visual warning if over limit
-                if (state.limits.instagram > 30) {
-                    instagramInput.style.borderColor = 'var(--danger)';
-                } else {
-                    instagramInput.style.borderColor = '';
-                }
-            });
-        }
-
-        // Release toggle
-        const releaseNo = document.getElementById('releaseNo');
-        const releaseYes = document.getElementById('releaseYes');
-
-        if (state.limits.release === false) {
-            releaseNo.classList.add('active');
-        } else if (state.limits.release === true) {
-            releaseYes.classList.add('active');
-        }
-
-        releaseNo.addEventListener('click', () => {
-            state.limits.release = false;
-            releaseNo.classList.add('active');
-            releaseYes.classList.remove('active');
-            Storage.save();
-        });
-
-        releaseYes.addEventListener('click', () => {
-            state.limits.release = true;
-            releaseYes.classList.add('active');
-            releaseNo.classList.remove('active');
-            Storage.save();
-        });
+        // Only screen time tracking now (Instagram and release removed)
     }
 
     // ==================== TIMERS ====================
