@@ -32,8 +32,46 @@
     async function syncFromLocalTracker() {
         const data = await checkLocalTracker();
         if (data) {
+            // Sync screen time
             state.screenTime.totalToday = data.total_seconds;
             updateScreenTimeDisplay();
+
+            // Sync counters from alert actions
+            if (data.counts) {
+                state.counters.breaks = data.counts.breaks || 0;
+                document.getElementById('breaksCount').textContent = state.counters.breaks;
+            }
+
+            // Sync checklist items from scheduled alerts
+            if (data.checklist) {
+                // Morning checklist items
+                if (data.checklist.morning) {
+                    ['morning-water', 'morning-splash', 'morning-almonds', 'morning-neti'].forEach(id => {
+                        state.checklist[id] = true;
+                        const cb = document.querySelector(`input[data-id="${id}"]`);
+                        if (cb) cb.checked = true;
+                    });
+                }
+                // Evening checklist items
+                if (data.checklist.evening) {
+                    ['evening-nuts', 'evening-drops', 'evening-sunetra'].forEach(id => {
+                        state.checklist[id] = true;
+                        const cb = document.querySelector(`input[data-id="${id}"]`);
+                        if (cb) cb.checked = true;
+                    });
+                }
+                // Before bed checklist items
+                if (data.checklist.bedtime) {
+                    ['bed-milk', 'bed-triphala', 'bed-ghee', 'bed-almonds', 'bed-noscreen'].forEach(id => {
+                        state.checklist[id] = true;
+                        const cb = document.querySelector(`input[data-id="${id}"]`);
+                        if (cb) cb.checked = true;
+                    });
+                }
+                // Update progress bar
+                updateProgress();
+            }
+
             return true;
         }
         return false;
