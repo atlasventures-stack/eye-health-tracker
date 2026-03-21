@@ -141,10 +141,10 @@
             totalToday: 0
         },
         timers: {
-            t2020: { enabled: true, remaining: 20 * 60, interval: null },
-            water: { enabled: true, remaining: 30 * 60, interval: null },
-            drops: { enabled: true, remaining: 2 * 60 * 60, interval: null },
-            break: { enabled: true, remaining: 30 * 60, interval: null }
+            t2020: { enabled: true, remaining: 60 * 60, interval: null },
+            water: { enabled: true, remaining: 60 * 60, interval: null },
+            drops: { enabled: true, remaining: 60 * 60, interval: null },
+            break: { enabled: true, remaining: 60 * 60, interval: null }
         },
         history: {},
         notificationsEnabled: false
@@ -304,31 +304,30 @@
     }
 
     function initTimers() {
-        // 20-20-20 Timer
-        setupTimer('2020', 20 * 60, () => {
-            showBreakModal('20-20-20 Break!', 'Look at something 20 feet away for 20 seconds.');
-            sendNotification('20-20-20 Break', 'Look at something 20 feet away for 20 seconds');
+        // ALERTS DISABLED - All alerts now come from macOS shell script only
+        // Timers still run for visual countdown display, but no popups/notifications
+
+        // 20-20-20 Timer (hourly) - display only, no alert
+        setupTimer('2020', 60 * 60, () => {
+            // Alert handled by macOS script - just update counter
             state.counters.breaks++;
             document.getElementById('breaksCount').textContent = state.counters.breaks;
             Storage.save();
         });
 
-        // Water Timer
-        setupTimer('Water', 30 * 60, () => {
-            showToast('Time to drink water! Stay hydrated.');
-            sendNotification('Water Reminder', 'Time to drink some water!');
+        // Water Timer (hourly) - display only, no alert
+        setupTimer('Water', 60 * 60, () => {
+            // Alert handled by macOS script
         });
 
-        // Eye Drops Timer
-        setupTimer('Drops', 2 * 60 * 60, () => {
-            showToast('Time for eye drops! Use Refresh Tears.');
-            sendNotification('Eye Drops Reminder', 'Time to use Refresh Tears!');
+        // Eye Drops Timer (hourly) - display only, no alert
+        setupTimer('Drops', 60 * 60, () => {
+            // Alert handled by macOS script
         });
 
-        // Screen Break Timer
-        setupTimer('Break', 30 * 60, () => {
-            showBreakModal('Screen Break Time!', 'You\'ve been on screen for 30 minutes. Take a 5-minute break.');
-            sendNotification('Screen Break', 'Take a 5-minute break from your screen');
+        // Screen Break Timer (hourly) - display only, no alert
+        setupTimer('Break', 60 * 60, () => {
+            // Alert handled by macOS script
         });
 
         // Notification enable button
@@ -599,7 +598,31 @@
     }
 
     // ==================== HISTORY ====================
-    function initHistory() {
+    let screenTimeHistory = []; // Store fetched history
+
+    async function fetchScreenTimeHistory() {
+        try {
+            const response = await fetch(LOCAL_API + '/history?days=14', {
+                method: 'GET',
+                mode: 'cors',
+                cache: 'no-cache'
+            });
+            if (response.ok) {
+                const data = await response.json();
+                screenTimeHistory = data.history || [];
+                return true;
+            }
+        } catch (e) {
+            console.log('Could not fetch history from local API');
+        }
+        return false;
+    }
+
+    async function initHistory() {
+        // Fetch history from local API
+        await fetchScreenTimeHistory();
+        renderDailyChart();
+        renderAppBreakdown();
         updateWeekGrid();
         updateStats();
 
@@ -618,6 +641,124 @@
         document.getElementById('resetData').addEventListener('click', Storage.reset);
     }
 
+    // Render daily screen time bar chart
+    function renderDailyChart() {
+        const container = document.getElementById('dailyChart');
+        if (!container) return;
+
+        const last7Days = screenTimeHistory.slice(0, 7).reverse();
+
+        if (last7Days.length === 0) {
+            container.innerHTML = '<div class="no-data-message">No screen time data available</div>';
+            return;
+        }
+
+        const maxHours = 12; // Scale bar to 12 hours max
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const todayStr = Storage.getToday();
+
+        container.innerHTML = last7Days.map(entry => {
+            const date = new Date(entry.date);
+            const dayName = days[date.getDay()];
+            const dayNum = date.getDate();
+            const hours = entry.total_seconds / 3600;
+            const widthPercent = Math.min((hours / maxHours) * 100, 100);
+
+            // Color based on hours
+            let colorClass = 'green';
+            if (hours >= 8) colorClass = 'red';
+            else if (hours >= 6) colorClass = 'yellow';
+
+            const isToday = entry.date === todayStr;
+            const hoursDisplay = Math.floor(hours);
+            const minsDisplay = Math.floor((hours % 1) * 60);
+
+            return `
+                <div class="daily-bar-row ${isToday ? 'today' : ''}">
+                    <div class="daily-bar-label">${dayName} ${dayNum}</div>
+                    <div class="daily-bar-container">
+                        <div class="daily-bar ${colorClass}" style="width: ${widthPercent}%"></div>
+                    </div>
+                    <div class="daily-bar-value">${hoursDisplay}h ${minsDisplay}m</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Render app usage breakdown
+    function renderAppBreakdown() {
+        const container = document.getElementById('appBreakdown');
+        if (!container) return;
+
+        // Aggregate app usage from last 7 days
+        const appTotals = {};
+        const last7Days = screenTimeHistory.slice(0, 7);
+
+        last7Days.forEach(day => {
+            const topApps = day.top_apps || [];
+            topApps.forEach(app => {
+                if (!appTotals[app.name]) {
+                    appTotals[app.name] = 0;
+                }
+                appTotals[app.name] += app.seconds;
+            });
+        });
+
+        // Sort by total time
+        const sortedApps = Object.entries(appTotals)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5); // Top 5 apps
+
+        if (sortedApps.length === 0) {
+            container.innerHTML = '<div class="no-data-message">App breakdown will appear after tracking</div>';
+            return;
+        }
+
+        const totalSeconds = sortedApps.reduce((sum, [_, secs]) => sum + secs, 0);
+
+        // App icons mapping
+        const appIcons = {
+            'Google Chrome': '🌐',
+            'Chrome': '🌐',
+            'Safari': '🧭',
+            'WhatsApp': '💬',
+            'Slack': '💼',
+            'stable': '💻',
+            'Terminal': '💻',
+            'Code': '📝',
+            'VS Code': '📝',
+            'Notion': '📓',
+            'Finder': '📁',
+            'Mail': '📧',
+            'Zoom': '📹',
+            'default': '📱'
+        };
+
+        container.innerHTML = sortedApps.map(([appName, seconds]) => {
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const percent = Math.round((seconds / totalSeconds) * 100);
+            const icon = appIcons[appName] || appIcons['default'];
+
+            // Rename 'stable' to 'Claude Code'
+            const displayName = appName === 'stable' ? 'Claude Code' : appName;
+
+            return `
+                <div class="app-row">
+                    <div class="app-icon">${icon}</div>
+                    <div class="app-name">${displayName}</div>
+                    <div class="app-bar-container">
+                        <div class="app-bar" style="width: ${percent}%"></div>
+                    </div>
+                    <div class="app-stats">
+                        <strong>${hours}h ${mins}m</strong>
+                        ${percent}%
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
     function updateWeekGrid() {
         const grid = document.getElementById('weekGrid');
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -633,65 +774,79 @@
 
         grid.innerHTML = weekDays.map(date => {
             const dateStr = date.toISOString().split('T')[0];
-            const dayData = state.history[dateStr];
-            const completion = dayData ? dayData.completionRate || 0 : 0;
+
+            // Get screen time from API history
+            const historyEntry = screenTimeHistory.find(h => h.date === dateStr);
+            const screenTimeHours = historyEntry ? historyEntry.hours : 0;
+
             const isToday = dateStr === Storage.getToday();
-            const isComplete = completion >= 80;
 
             return `
-                <div class="day-cell ${isToday ? 'today' : ''} ${isComplete ? 'complete' : ''}">
+                <div class="day-cell ${isToday ? 'today' : ''}" style="cursor: pointer;" onclick="showDayDetails('${dateStr}')">
                     <span class="day-name">${days[date.getDay()]}</span>
                     <span class="day-number">${date.getDate()}</span>
-                    <span class="day-progress">${completion}%</span>
+                    <span class="day-progress">${screenTimeHours}h</span>
                 </div>
             `;
         }).join('');
     }
 
+    // Show details for a specific day
+    window.showDayDetails = function(dateStr) {
+        const historyEntry = screenTimeHistory.find(h => h.date === dateStr);
+        if (historyEntry) {
+            const hours = Math.floor(historyEntry.total_seconds / 3600);
+            const minutes = Math.floor((historyEntry.total_seconds % 3600) / 60);
+            showToast(`${dateStr}: ${hours}h ${minutes}m screen time`);
+        } else {
+            showToast(`${dateStr}: No data recorded`);
+        }
+    };
+
     function updateStats() {
-        const historyDates = Object.keys(state.history).sort().slice(-30); // Last 30 days
+        // Use API history data for stats
+        const last7Days = screenTimeHistory.slice(0, 7);
+        const historyData = screenTimeHistory.slice(0, 30); // Last 30 days
 
-        // Average completion
-        let totalCompletion = 0;
-        historyDates.forEach(date => {
-            totalCompletion += state.history[date].completionRate || 0;
+        // Weekly total
+        let weeklyTotal = 0;
+        last7Days.forEach(entry => {
+            weeklyTotal += entry.total_seconds || 0;
         });
-        const avgCompletion = historyDates.length > 0
-            ? Math.round(totalCompletion / historyDates.length)
-            : 0;
-        document.getElementById('avgCompletion').textContent = avgCompletion + '%';
+        const weeklyHours = Math.round(weeklyTotal / 3600);
+        const weeklyTotalEl = document.getElementById('weeklyTotal');
+        if (weeklyTotalEl) weeklyTotalEl.textContent = weeklyHours + 'h';
 
-        // Streak
+        // Average screen time from API history
+        let totalScreenTime = 0;
+        let daysWithScreenTime = 0;
+        historyData.forEach(entry => {
+            if (entry.total_seconds > 0) {
+                totalScreenTime += entry.total_seconds;
+                daysWithScreenTime++;
+            }
+        });
+        const avgScreenTimeHours = daysWithScreenTime > 0
+            ? (totalScreenTime / daysWithScreenTime / 3600).toFixed(1)
+            : 0;
+        document.getElementById('avgScreenTime').textContent = avgScreenTimeHours + 'h';
+
+        // Streak - count consecutive days with screen time data
         let streak = 0;
         const today = new Date();
         for (let i = 0; i < 365; i++) {
             const date = new Date(today);
             date.setDate(date.getDate() - i);
             const dateStr = date.toISOString().split('T')[0];
-            const dayData = state.history[dateStr];
+            const historyEntry = screenTimeHistory.find(h => h.date === dateStr);
 
-            if (dayData && dayData.completionRate >= 50) {
+            if (historyEntry && historyEntry.total_seconds > 0) {
                 streak++;
-            } else if (i > 0) { // Don't break on today if it's incomplete
+            } else if (i > 0) {
                 break;
             }
         }
         document.getElementById('streakDays').textContent = streak;
-
-        // Average screen time
-        let totalScreenTime = 0;
-        let daysWithScreenTime = 0;
-        historyDates.forEach(date => {
-            const st = state.history[date].screenTime;
-            if (st && st.totalToday > 0) {
-                totalScreenTime += st.totalToday;
-                daysWithScreenTime++;
-            }
-        });
-        const avgScreenTimeHours = daysWithScreenTime > 0
-            ? Math.round(totalScreenTime / daysWithScreenTime / 3600)
-            : 0;
-        document.getElementById('avgScreenTime').textContent = avgScreenTimeHours + 'h';
     }
 
     // ==================== UI HELPERS ====================
